@@ -1,0 +1,96 @@
+import processing.serial.*;
+
+Serial myPort;
+int iAngle, iDistance;
+String data="";
+
+void setup() {
+  size(1200, 700);
+  smooth();
+  // IMPORTANT: Ensure COM3 matches your Arduino IDE port
+  myPort = new Serial(this, "COM3", 9600); 
+  myPort.bufferUntil('.');
+}
+
+void draw() {
+  // This creates the "fade" effect so objects leave a trail
+  fill(0, 15); 
+  noStroke();
+  rect(0, 0, width, height-height*0.065); 
+  
+  drawRadarBackground(); 
+  drawScanningLine();
+  drawDetectedObject(); // This draws the RED detection
+  drawTextDisplay();
+}
+
+void serialEvent (Serial myPort) {
+  data = myPort.readStringUntil('.');
+  if (data != null) {
+    data = data.substring(0, data.length()-1);
+    int index1 = data.indexOf(",");
+    if (index1 > -1) {
+      iAngle = int(data.substring(0, index1));
+      iDistance = int(data.substring(index1+1, data.length()));
+    }
+  }
+}
+
+void drawScanningLine() {
+  pushMatrix();
+  translate(width/2, height-height*0.074);
+  strokeWeight(9);
+  // Line turns Bright Red if object is within 5 inches
+  if (iDistance > 0 && iDistance < 13) {
+    stroke(255, 0, 0); 
+  } else {
+    stroke(30, 250, 60); // Green scanning line
+  }
+  line(0, 0, (height-height*0.12)*cos(radians(iAngle)), -(height-height*0.12)*sin(radians(iAngle)));
+  popMatrix();
+}
+
+void drawDetectedObject() {
+  pushMatrix();
+  translate(width/2, height-height*0.074);
+  strokeWeight(10);
+  stroke(255, 10, 10); // Red color for the "Blip"
+  
+  // Convert distance to pixels
+  float pixsDistance = iDistance*((height-height*0.1666)*0.025);
+  
+  // Only draw the red blip if distance is within range
+  if (iDistance < 40 && iDistance > 0) {
+    point(pixsDistance*cos(radians(iAngle)), -pixsDistance*sin(radians(iAngle)));
+  }
+  popMatrix();
+}
+
+void drawRadarBackground() {
+  pushMatrix();
+  translate(width/2, height-height*0.074);
+  noFill();
+  strokeWeight(2);
+  stroke(98, 245, 31);
+  arc(0, 0, (width-width*0.0625), (width-width*0.0625), PI, TWO_PI);
+  arc(0, 0, (width-width*0.27), (width-width*0.27), PI, TWO_PI);
+  arc(0, 0, (width-width*0.479), (width-width*0.479), PI, TWO_PI);
+  popMatrix();
+}
+
+void drawTextDisplay() {
+  fill(0);
+  noStroke();
+  rect(0, height-height*0.0648, width, height);
+  
+  if (iDistance > 0 && iDistance < 13) {
+    fill(255, 0, 0);
+    textSize(35);
+    text("!!! OBJECT DETECTED !!!", width/2 - 150, height-25);
+  } else {
+    fill(98, 245, 31);
+    textSize(25);
+    text("Angle: " + iAngle + "°", width*0.05, height-25);
+    text("Distance: " + iDistance + " cm", width*0.75, height-25);
+  }
+}
